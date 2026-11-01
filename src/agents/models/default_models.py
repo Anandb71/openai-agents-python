@@ -8,6 +8,7 @@ from openai.types.shared.reasoning import Reasoning
 from agents.model_settings import ModelSettings
 
 OPENAI_DEFAULT_MODEL_ENV_VARIABLE_NAME = "OPENAI_DEFAULT_MODEL"
+_SDK_DEFAULT_MODEL = "gpt-5.6-luna"
 
 GPT5DefaultReasoningEffort = Literal["none", "low", "medium"]
 
@@ -100,7 +101,7 @@ def get_default_model() -> str:
     """
     Returns the default model name.
     """
-    return os.getenv(OPENAI_DEFAULT_MODEL_ENV_VARIABLE_NAME, "gpt-5.6-luna").lower()
+    return os.getenv(OPENAI_DEFAULT_MODEL_ENV_VARIABLE_NAME, _SDK_DEFAULT_MODEL).lower()
 
 
 def get_default_model_settings(model: str | None = None) -> ModelSettings:

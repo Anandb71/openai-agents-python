@@ -37,6 +37,7 @@ from agents.memory.openai_responses_compaction_session import (
     is_openai_model_name,
     select_compaction_candidate_items,
 )
+from agents.models.default_models import get_default_model
 from agents.run_context import RunContextWrapper
 from agents.run_internal.items import (
     TOOL_CALL_SESSION_DESCRIPTION_KEY,
@@ -395,6 +396,34 @@ class TestOpenAIResponsesCompactionSession:
             model="gpt-4.1",
         )
         assert session.model == "gpt-4.1"
+
+    def test_init_defaults_to_sdk_default_model(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("OPENAI_DEFAULT_MODEL", raising=False)
+        session = OpenAIResponsesCompactionSession(
+            session_id="test",
+            underlying_session=self.create_mock_session(),
+        )
+        assert session.model == get_default_model()
+        assert session.model != "gpt-4.1"
+
+    def test_init_default_model_follows_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("OPENAI_DEFAULT_MODEL", "gpt-5.4-mini")
+        session = OpenAIResponsesCompactionSession(
+            session_id="test",
+            underlying_session=self.create_mock_session(),
+        )
+        assert session.model == "gpt-5.4-mini"
+
+    def test_init_default_model_ignores_non_openai_env(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_DEFAULT_MODEL", "anthropic/claude-3")
+        session = OpenAIResponsesCompactionSession(
+            session_id="test",
+            underlying_session=self.create_mock_session(),
+        )
+        monkeypatch.delenv("OPENAI_DEFAULT_MODEL")
+        assert session.model == get_default_model()
 
     @pytest.mark.asyncio
     async def test_add_items_delegates(self) -> None:
@@ -964,7 +993,7 @@ class TestOpenAIResponsesCompactionSession:
 
         mock_client.responses.compact.assert_called_once()
         call_kwargs = mock_client.responses.compact.call_args.kwargs
-        assert call_kwargs.get("model") == "gpt-4.1"
+        assert call_kwargs.get("model") == get_default_model()
         assert "previous_response_id" not in call_kwargs
         assert call_kwargs.get("input") == items
 
@@ -1866,7 +1895,7 @@ class TestOpenAIResponsesCompactionSession:
         assert warning_model.received_warnings_arg is False
         mock_client.responses.compact.assert_called_once_with(
             previous_response_id="resp-123",
-            model="gpt-4.1",
+            model=get_default_model(),
         )
 
     @pytest.mark.asyncio

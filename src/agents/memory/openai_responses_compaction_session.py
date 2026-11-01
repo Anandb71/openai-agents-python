@@ -11,6 +11,7 @@ from .._tool_identity import get_hosted_mcp_approval_request_identity
 from ..items import TResponseInputItem
 from ..logger import log_model_and_tool_action_warning
 from ..models._openai_shared import get_default_openai_client
+from ..models.default_models import _SDK_DEFAULT_MODEL, get_default_model
 from ..run_internal.items import (
     ReasoningItemIdPolicy,
     apply_reasoning_item_id_policy,
@@ -116,7 +117,7 @@ class OpenAIResponsesCompactionSession(SessionABC, OpenAIResponsesCompactionAwar
         underlying_session: Session,
         *,
         client: AsyncOpenAI | None = None,
-        model: str = "gpt-4.1",
+        model: str | None = None,
         compaction_mode: OpenAIResponsesCompactionMode = "auto",
         should_trigger_compaction: Callable[[dict[str, Any]], bool] | None = None,
         max_rollback_items: int | None = None,
@@ -129,8 +130,10 @@ class OpenAIResponsesCompactionSession(SessionABC, OpenAIResponsesCompactionAwar
                 OpenAIConversationsSession.
             client: OpenAI client for responses.compact API calls. Defaults to
                 get_default_openai_client() or new AsyncOpenAI().
-            model: Model to use for responses.compact. Defaults to "gpt-4.1". Must be an
-                OpenAI model name (gpt-*, o*, or ft:gpt-*).
+            model: Model to use for responses.compact. Defaults to the SDK default model
+                from get_default_model(), falling back to the built-in SDK default when
+                OPENAI_DEFAULT_MODEL is not an OpenAI model name. Must be an OpenAI model
+                name (gpt-*, o*, or ft:gpt-*).
             compaction_mode: Controls how the compaction request provides conversation
                 history. "auto" (default) uses input when the last response was not
                 stored or no response_id is available.
@@ -151,6 +154,11 @@ class OpenAIResponsesCompactionSession(SessionABC, OpenAIResponsesCompactionAwar
                 "OpenAIResponsesCompactionSession cannot wrap OpenAIConversationsSession "
                 "because it manages its own history on the server."
             )
+
+        if model is None:
+            model = get_default_model()
+            if not is_openai_model_name(model):
+                model = _SDK_DEFAULT_MODEL
 
         if not is_openai_model_name(model):
             raise ValueError(f"Unsupported model for OpenAI responses compaction: {model}")

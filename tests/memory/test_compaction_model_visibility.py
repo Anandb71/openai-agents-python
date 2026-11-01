@@ -14,6 +14,7 @@ from agents.handoffs import HandoffInputData
 from agents.items import TResponseInputItem
 from agents.memory import OpenAIResponsesCompactionSession, Session, SQLiteSession
 from agents.memory.session import SessionABC
+from agents.models.default_models import get_default_model
 from agents.result import RunResult, RunResultStreaming
 from agents.run_config import CallModelData, ModelInputData
 from agents.testing import ScriptedModel
@@ -751,7 +752,7 @@ async def test_manual_compaction_refreshes_expired_encrypted_history(
         clock[0] += 11
         assert await session.get_items() == []
         await session.run_compaction({"force": True})
-        client.responses.compact.assert_awaited_once_with(model="gpt-4.1", input=[])
+        client.responses.compact.assert_awaited_once_with(model=get_default_model(), input=[])
         assert await session.get_items() == []
 
         live: TResponseInputItem = {"role": "user", "content": "synthetic live item"}
